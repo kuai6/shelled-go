@@ -56,6 +56,7 @@ func main() {
 	handlers := map[udp.CMD]udp.Handler{
 		udp.CMD_HELLO: udp.NewHelloHandler(app, client),
 		udp.CMD_PING:  udp.NewPingHandler(app, client),
+		udp.CMD_DATA:  udp.NewDataHandler(app),
 	}
 
 	server := udp.NewServer(conn, handlers)

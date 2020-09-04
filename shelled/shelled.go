@@ -84,6 +84,7 @@ func (a *Shelled) Init(
 
 	a.RegisterHandler(DeviceRegisterEventName, NewDeviceRegisterEventHandler(100, deviceService))
 	a.RegisterHandler(DevicePingEventName, NewDevicePingEventHandler(100, deviceService))
+	a.RegisterHandler(DeviceDataEventName, NewDeviceDataEventHandler(100, deviceService))
 
 	return nil
 }
@@ -101,15 +102,13 @@ func (a *Shelled) Dispatch(e Event) {
 		return
 	}
 
-	go func() {
-		ctx := context.WithValue(context.Background(), "requestID", requestId)
-		defer ctx.Done()
-		for _, h := range handlers {
-			if err := h.Handle(ctx, e); err != nil {
-				log.Printf("dispatch event \"%s\" error: %s", e.Name(), err)
-			}
+	ctx := context.WithValue(context.Background(), "requestID", requestId)
+	defer ctx.Done()
+	for _, h := range handlers {
+		if err := h.Handle(ctx, e); err != nil {
+			log.Printf("dispatch event \"%s\" error: %s", e.Name(), err)
 		}
-	}()
+	}
 }
 
 func (a *Shelled) Destroy() error {

@@ -20,5 +20,7 @@ type Bank struct {
 }
 
 type BankStorage interface {
-	FindByDeviceIdAndNumber(deviceId int32, number int32) (*Bank, error)
+	FindByDeviceIdAndNumber(deviceId int32, number int) (*Bank, error)
+	Register(deviceId int32, bankType BankType, number, pins int) (*Bank, error)
+	Update(bank *Bank) (*Bank, error)
 }

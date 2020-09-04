@@ -2,6 +2,7 @@ package udp
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"shelled-backend/shelled"
 	"shelled-backend/shelled/db"
@@ -77,8 +78,7 @@ func NewPingHandler(application shelled.Application, client *Client) *PingHandle
 }
 
 func (h *PingHandler) Handle(m IncomeMessage) error {
-	e := shelled.NewDevicePingEvent()
-	e.SerialNumber = m.SN
+	e := shelled.NewDevicePingEvent(m.SN, m.IP, m.Port)
 
 	h.application.Dispatch(e)
 
@@ -91,6 +91,32 @@ func (h *PingHandler) Handle(m IncomeMessage) error {
 	if err := h.client.Send(o); err != nil {
 		return fmt.Errorf("ping handle erorr: can't send pong: %s", err)
 	}
+
+	return nil
+}
+
+type DataHandler struct {
+	application shelled.Application
+}
+
+func NewDataHandler(application shelled.Application) *DataHandler {
+	return &DataHandler{
+		application: application,
+	}
+}
+
+func (h *DataHandler) Handle(m IncomeMessage) error {
+	e := shelled.NewDeviceDataEvent(m.SN, m.IP, m.Port)
+
+	e.Payload = make([]byte, len(m.Body)*utf8.UTFMax)
+
+	count := 0
+	for _, r := range m.Body {
+		count += utf8.EncodeRune(e.Payload[count:], r)
+	}
+	e.Payload = e.Payload[:count]
+
+	h.application.Dispatch(e)
 
 	return nil
 }

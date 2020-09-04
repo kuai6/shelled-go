@@ -13,6 +13,7 @@ type EventName string
 const (
 	DeviceRegisterEventName EventName = "device_register"
 	DevicePingEventName     EventName = "device_ping"
+	DeviceDataEventName     EventName = "device_data"
 )
 
 type DeviceRegisterEvent struct {
@@ -58,7 +59,6 @@ func (h *DeviceRegisterEventHandler) Order() int {
 }
 
 func (h *DeviceRegisterEventHandler) Handle(ctx context.Context, e Event) error {
-
 	var ev *DeviceRegisterEvent
 	var ok bool
 	if ev, ok = e.(*DeviceRegisterEvent); !ok {
@@ -81,13 +81,17 @@ func (h *DeviceRegisterEventHandler) Handle(ctx context.Context, e Event) error 
 }
 
 type DevicePingEvent struct {
-	name         EventName
-	SerialNumber string
+	BasicEvent
 }
 
-func NewDevicePingEvent() *DevicePingEvent {
+func NewDevicePingEvent(sn, ip string, port uint16) *DevicePingEvent {
 	return &DevicePingEvent{
-		name: DevicePingEventName,
+		BasicEvent: BasicEvent{
+			name: DevicePingEventName,
+			ip:   ip,
+			port: port,
+			sn:   sn,
+		},
 	}
 }
 
@@ -119,12 +123,58 @@ func (h *DevicePingEventHandler) Handle(ctx context.Context, e Event) error {
 	if ev, ok = e.(*DevicePingEvent); !ok {
 
 	}
-	d, err := h.deviceService.PingDevice(ev.SerialNumber)
+	d, err := h.deviceService.PingDevice(ev.SN())
 	if err != nil {
 		return fmt.Errorf("device ping filed: %s", err)
 	}
 
 	fmt.Printf("[%s] device ping handle: %d\n", ctx.Value("requestID"), d.ID)
 
+	return nil
+}
+
+type DeviceDataEvent struct {
+	BasicEvent
+	Payload []byte
+}
+
+func NewDeviceDataEvent(sn, ip string, port uint16) *DeviceDataEvent {
+	return &DeviceDataEvent{
+		BasicEvent: BasicEvent{
+			name: DeviceDataEventName,
+			ip:   ip,
+			port: port,
+			sn:   sn,
+		},
+	}
+}
+
+type DeviceDataEventHandler struct {
+	order         int
+	deviceService *service.DeviceService
+}
+
+func NewDeviceDataEventHandler(
+	order int,
+	deviceService *service.DeviceService) *DeviceDataEventHandler {
+	return &DeviceDataEventHandler{
+		order:         order,
+		deviceService: deviceService,
+	}
+}
+
+func (h *DeviceDataEventHandler) Order() int {
+	return h.order
+}
+
+func (h *DeviceDataEventHandler) Handle(ctx context.Context, e Event) error {
+	var ev *DeviceDataEvent
+	var ok bool
+	if ev, ok = e.(*DeviceDataEvent); !ok {
+
+	}
+	if err := h.deviceService.HandleData(ev.SN(), ev.Payload); err != nil {
+		return fmt.Errorf("handle data error: %s", err)
+	}
 	return nil
 }
